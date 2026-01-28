@@ -1,0 +1,5 @@
+{
+  "name": "CommuteBrief",
+  "description": "A personalized news companion that transforms long articles into concise, high-quality audio summaries perfect for your daily commute.",
+  "requestFramePermissions": []
+}

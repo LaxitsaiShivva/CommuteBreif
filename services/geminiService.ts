@@ -2,9 +2,15 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { VoiceName, Tone, Language, SummaryLength } from "../types.ts";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export type InputMode = 'text' | 'url' | 'search';
+
+function getAI() {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("Missing Gemini API Key. Please configure it in your environment.");
+  }
+  return new GoogleGenAI({ apiKey });
+}
 
 function cleanAndParseJSON(text: string) {
   try {
@@ -20,7 +26,7 @@ function cleanAndParseJSON(text: string) {
     if (secondMatch) {
       try { return JSON.parse(secondMatch[0]); } catch (e2) {}
     }
-    throw new Error("Formatting error. Please try a simpler request.");
+    throw new Error("Formatting error. The news data was too complex to process quickly.");
   }
 }
 
@@ -32,6 +38,7 @@ export async function generateSummary(
   length: SummaryLength = SummaryLength.Medium
 ): Promise<{ title: string; summary: string; category: string; sources?: { uri: string; title: string }[] }> {
   
+  const ai = getAI();
   const toneInstruction = {
     [Tone.Professional]: "Professional news anchor style.",
     [Tone.Casual]: "Friendly storytelling style.",
@@ -95,6 +102,7 @@ Detail: ${lengthInstruction[length]}`;
 }
 
 export async function generateAudio(text: string, voice: VoiceName = VoiceName.Kore, language: Language = Language.English): Promise<string> {
+  const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
     contents: [{ parts: [{ text: `Language: ${language}. Read this with native accent: ${text}` }] }],
@@ -109,7 +117,7 @@ export async function generateAudio(text: string, voice: VoiceName = VoiceName.K
   });
 
   const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-  if (!base64Audio) throw new Error("Voice unavailable.");
+  if (!base64Audio) throw new Error("Voice synthesis failed. Please try again.");
   return base64Audio;
 }
 

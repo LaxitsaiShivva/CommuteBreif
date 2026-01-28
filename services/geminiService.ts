@@ -1,14 +1,11 @@
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
-import { VoiceName, Tone, Language, SummaryLength } from "../types";
+import { VoiceName, Tone, Language, SummaryLength } from "../types.ts";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export type InputMode = 'text' | 'url' | 'search';
 
-/**
- * Robustly extracts JSON from model output.
- */
 function cleanAndParseJSON(text: string) {
   try {
     let cleaned = text.trim();
@@ -23,13 +20,10 @@ function cleanAndParseJSON(text: string) {
     if (secondMatch) {
       try { return JSON.parse(secondMatch[0]); } catch (e2) {}
     }
-    throw new Error("The narration engine failed to format the response. Please try a shorter text.");
+    throw new Error("Formatting error. Please try a simpler request.");
   }
 }
 
-/**
- * Summarizes news content using Flash model for maximum speed.
- */
 export async function generateSummary(
   input: string, 
   tone: Tone = Tone.Professional,
@@ -39,21 +33,21 @@ export async function generateSummary(
 ): Promise<{ title: string; summary: string; category: string; sources?: { uri: string; title: string }[] }> {
   
   const toneInstruction = {
-    [Tone.Professional]: "Professional, clear news anchor style.",
-    [Tone.Casual]: "Friendly, warm storytelling style.",
-    [Tone.Dramatic]: "High-energy breaking news style."
+    [Tone.Professional]: "Professional news anchor style.",
+    [Tone.Casual]: "Friendly storytelling style.",
+    [Tone.Dramatic]: "Intense breaking news style."
   };
 
   const lengthInstruction = {
-    [SummaryLength.Short]: "Concise briefing (120 words).",
-    [SummaryLength.Medium]: "Standard briefing (400 words).",
-    [SummaryLength.Long]: "Detailed briefing (800 words)."
+    [SummaryLength.Short]: "Concise (120 words).",
+    [SummaryLength.Medium]: "Standard (400 words).",
+    [SummaryLength.Long]: "Detailed (800 words)."
   };
 
-  const systemInstruction = `You are an ultra-fast news summarizer. 
-ABSOLUTE RULE: Output MUST be in ${language} native script.
+  const systemInstruction = `You are a high-speed news summarizer. 
+ABSOLUTE RULE: Title and Summary MUST be in ${language} script.
 Style: ${toneInstruction[tone]}
-Detail Level: ${lengthInstruction[length]}`;
+Detail: ${lengthInstruction[length]}`;
 
   const config: any = {
     systemInstruction,
@@ -73,16 +67,15 @@ Detail Level: ${lengthInstruction[length]}`;
     config.tools = [{ googleSearch: {} }];
   }
 
-  // Switched from Pro to Flash for much faster processing
   const modelName = 'gemini-3-flash-preview';
   let userPrompt = "";
 
   if (mode === 'url') {
-    userPrompt = `Fetch from ${input}, summarize & translate to ${language}. Length: ${length}`;
+    userPrompt = `Summary & translation for ${input} in ${language}. Level: ${length}`;
   } else if (mode === 'search') {
-    userPrompt = `Search news for ${input}, summarize & translate to ${language}. Length: ${length}`;
+    userPrompt = `Search news for ${input}, summary & translate to ${language}. Level: ${length}`;
   } else {
-    userPrompt = `Summarize and translate to ${language}: "${input}". Length: ${length}`;
+    userPrompt = `Summarize & translate to ${language}: "${input}". Level: ${length}`;
   }
 
   const response = await ai.models.generateContent({
@@ -101,13 +94,10 @@ Detail Level: ${lengthInstruction[length]}`;
   return { ...data, sources };
 }
 
-/**
- * Generates audio using TTS.
- */
 export async function generateAudio(text: string, voice: VoiceName = VoiceName.Kore, language: Language = Language.English): Promise<string> {
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
-    contents: [{ parts: [{ text: `Language: ${language}. Read this with a professional accent: ${text}` }] }],
+    contents: [{ parts: [{ text: `Language: ${language}. Read this with native accent: ${text}` }] }],
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: {
@@ -119,7 +109,7 @@ export async function generateAudio(text: string, voice: VoiceName = VoiceName.K
   });
 
   const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-  if (!base64Audio) throw new Error("Audio synthesis engine is currently busy.");
+  if (!base64Audio) throw new Error("Voice unavailable.");
   return base64Audio;
 }
 

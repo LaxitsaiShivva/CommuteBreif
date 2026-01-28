@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { BriefItem, VoiceName, Tone, Language, SummaryLength } from './types';
-import { generateSummary, generateAudio, InputMode, pcmToWavBlob } from './services/geminiService';
-import AudioPlayer from './components/AudioPlayer';
-import { supabase } from './supabase';
+import { BriefItem, VoiceName, Tone, Language, SummaryLength } from './types.ts';
+import { generateSummary, generateAudio, InputMode, pcmToWavBlob } from './services/geminiService.ts';
+import AudioPlayer from './components/AudioPlayer.tsx';
+import { supabase } from './supabase.ts';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -26,7 +26,6 @@ const App: React.FC = () => {
   const [inputMode, setInputMode] = useState<InputMode>('text');
   const [toast, setToast] = useState<{ message: string; visible: boolean; type: 'success' | 'error' | 'info' }>({ message: '', visible: false, type: 'info' });
 
-  // Persistence logic: Hybrid Cloud/Local
   useEffect(() => {
     const saved = localStorage.getItem('commute_brief_local_history');
     if (saved && !user) setHistory(JSON.parse(saved));
@@ -72,7 +71,6 @@ const App: React.FC = () => {
       if (error) throw error;
       if (data) {
         const localData = JSON.parse(localStorage.getItem('commute_brief_local_history') || '[]');
-        
         setHistory(data.map((item: any) => {
           const localMatch = localData.find((l: any) => l.id === item.id);
           return {
@@ -139,7 +137,7 @@ const App: React.FC = () => {
       return;
     }
     setIsProcessing(true);
-    showToast(`Generating ${selectedLength} briefing...`, "info");
+    showToast(`Turbo-generating ${selectedLength} briefing...`, "info");
     
     try {
       const { title, summary, category, sources } = await generateSummary(
@@ -149,7 +147,7 @@ const App: React.FC = () => {
         selectedLanguage, 
         selectedLength
       );
-      showToast("Synthesizing Audio...", "info");
+      showToast("Syncing narration...", "info");
       const audioBase64 = await generateAudio(summary, selectedVoice, selectedLanguage);
       
       const newId = crypto.randomUUID();
@@ -183,12 +181,8 @@ const App: React.FC = () => {
             category: newItem.category,
             tone: newItem.tone
           }]);
-          
-          if (error) {
-             console.warn("DB Column mismatch (safe). Briefing is in local storage.", error);
-          } else {
-             showToast("Synced to Cloud", 'success');
-          }
+          if (error) console.warn("DB Sync issue (local backup used).", error);
+          else showToast("Cloud Synced", 'success');
         } catch (dbErr) {
           console.error("Database sync issue:", dbErr);
         }
@@ -207,11 +201,8 @@ const App: React.FC = () => {
     if (!confirm("Delete permanently?")) return;
     setHistory(prev => prev.filter(item => item.id !== id));
     if (activeBrief?.id === id) setActiveBrief(null);
-
     try {
-      if (user) {
-        await supabase.from('briefings').delete().eq('id', id).eq('user_id', user.id);
-      }
+      if (user) await supabase.from('briefings').delete().eq('id', id).eq('user_id', user.id);
       showToast("Removed", 'success');
     } catch (err) {
       console.error("Delete sync error:", err);
@@ -252,7 +243,7 @@ const App: React.FC = () => {
         <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-12">
           <div className="text-center mb-10">
             <div className="flex justify-center mb-6">
-               <div className="w-16 h-16 bg-slate-900 rounded-3xl flex items-center justify-center text-white text-3xl shadow-xl shadow-slate-900/20 transform -rotate-6">
+               <div className="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white text-4xl shadow-2xl shadow-slate-900/40 logo-fast">
                 <i className="fa-solid fa-bolt-lightning"></i>
               </div>
             </div>
@@ -272,7 +263,7 @@ const App: React.FC = () => {
           </form>
           <div className="relative mb-8">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
-            <div className="relative flex justify-center text-[10px] uppercase font-black text-slate-300"><span className="bg-white px-4 tracking-widest">No Database Required</span></div>
+            <div className="relative flex justify-center text-[10px] uppercase font-black text-slate-300"><span className="bg-white px-4 tracking-widest">Speed First</span></div>
           </div>
           <button onClick={handleGuestEntry} className="w-full py-5 bg-white border-2 border-slate-900 text-slate-900 font-black rounded-xl hover:bg-slate-900 hover:text-white transition-all text-[11px] uppercase tracking-widest active:scale-95">
             Continue as Guest
@@ -294,13 +285,13 @@ const App: React.FC = () => {
       <nav className="bg-white/95 backdrop-blur-2xl border-b border-slate-50 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-8 py-6 flex justify-between items-center">
           <div className="flex items-center gap-5">
-            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg shadow-slate-900/10">
+            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white text-xl shadow-2xl logo-fast">
               <i className="fa-solid fa-bolt-lightning"></i>
             </div>
             <div>
               <span className="text-3xl font-black tracking-tighter text-slate-900 italic block leading-none">CommuteBrief</span>
               <span className="text-[9px] font-black text-slate-400 tracking-[0.2em] uppercase mt-1">
-                {isGuest ? 'Guest Session' : 'Cloud Dashboard'}
+                {isGuest ? 'Turbo Mode • Guest' : 'Turbo Mode • Pro'}
               </span>
             </div>
           </div>
@@ -313,9 +304,8 @@ const App: React.FC = () => {
 
       <main className="max-w-7xl mx-auto w-full px-8 py-12 flex-grow">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-          
           <div className="lg:col-span-8 space-y-12">
-            <div className="bg-[#fafafa] rounded-[2.5rem] p-10 border border-slate-100">
+            <div className="bg-[#fafafa] rounded-[2.5rem] p-10 border border-slate-100 shadow-sm">
               <div className="flex gap-4 mb-10">
                 {(['text', 'url', 'search'] as InputMode[]).map(mode => (
                   <button key={mode} onClick={() => setInputMode(mode)} className={`px-6 py-3 rounded-xl text-[10px] font-black tracking-widest transition-all ${inputMode === mode ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 bg-white border border-slate-100 hover:border-slate-300'}`}>
@@ -351,7 +341,7 @@ const App: React.FC = () => {
                   </select>
                 </div>
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 px-1">Brief Length</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 px-1">Detail</label>
                   <select value={selectedLength} onChange={(e) => setSelectedLength(e.target.value as SummaryLength)} className="w-full py-4 px-5 rounded-xl bg-white border border-slate-100 text-[11px] font-bold text-slate-800 outline-none shadow-sm transition-all hover:border-slate-300">
                     {Object.values(SummaryLength).map(sl => <option key={sl} value={sl}>{sl}</option>)}
                   </select>
@@ -364,7 +354,7 @@ const App: React.FC = () => {
                 className="w-full py-6 bg-slate-900 hover:bg-black text-white font-black text-xs uppercase tracking-[0.3em] rounded-2xl shadow-2xl transition-all disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-4"
               >
                 {isProcessing ? (
-                  <><div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> FAST TRACKING...</>
+                  <><div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> TURBO PROCESSING...</>
                 ) : `Generate ${selectedLanguage} Briefing`}
               </button>
             </div>
@@ -468,7 +458,7 @@ const App: React.FC = () => {
 
       <footer className="max-w-7xl mx-auto w-full px-8 py-20 border-t border-slate-50 text-center">
         <p className="text-[11px] font-black text-slate-200 uppercase tracking-[0.8em] italic">
-          COMMUTEBRIEF &bull; 2026
+          COMMUTEBRIEF &bull; TURBO 2026
         </p>
       </footer>
     </div>

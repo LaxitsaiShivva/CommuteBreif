@@ -16,8 +16,10 @@
 
       body {
         font-family: var(--font-primary);
-        background-color: #f8fafc;
+        background-color: #ffffff;
         color: #0f172a;
+        margin: 0;
+        overflow-x: hidden;
       }
 
       .custom-scrollbar::-webkit-scrollbar {
@@ -33,18 +35,29 @@
       .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #cbd5e1;
       }
+
+      /* Animation for lightning logo */
+      @keyframes pulse-fast {
+        0%, 100% { transform: scale(1) rotate(-6deg); }
+        50% { transform: scale(1.1) rotate(-6deg); }
+      }
+      .logo-fast {
+        animation: pulse-fast 2s infinite ease-in-out;
+      }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
-  }
-}
-</script>
-</head>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.3",
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "react-dom": "https://esm.sh/react-dom@^19.2.3",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+        "@google/genai": "https://esm.sh/@google/genai@^1.38.0"
+      }
+    }
+    </script>
+    <script type="module" src="index.tsx"></script>
+  </head>
   <body>
     <div id="root"></div>
   </body>

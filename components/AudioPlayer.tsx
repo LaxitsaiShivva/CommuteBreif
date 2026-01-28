@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { decodeAudioPCM } from '../services/geminiService';
+import { decodeAudioPCM } from '../services/geminiService.ts';
 
 interface AudioPlayerProps {
   audioBase64: string;
